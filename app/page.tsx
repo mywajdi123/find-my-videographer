@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 type Creator = {
   name: string;
@@ -65,10 +65,8 @@ const filters = ["All creators", "Weddings", "Events", "Brands", "Music"];
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState("All creators");
-  const [referenceAdded, setReferenceAdded] = useState(false);
   const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null);
   const [bookingSent, setBookingSent] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const visibleCreators = useMemo(() => {
     if (activeFilter === "Weddings") {
@@ -93,11 +91,11 @@ export default function Home() {
     <main>
       <nav className="nav-shell" aria-label="Main navigation">
         <a className="brand" href="#top" aria-label="Find My Videographer home">
-          <span className="brand-mark">FMV</span>
+          <span className="brand-mark" aria-hidden="true"><i /></span>
           <span>Find My Videographer</span>
         </a>
         <div className="nav-links">
-          <a href="#creators">Explore creators</a>
+          <a href="#creators">Find videographers</a>
           <a href="#how-it-works">How it works</a>
           <a href="#for-creators">For creators</a>
         </div>
@@ -116,10 +114,14 @@ export default function Home() {
             real portfolios, clear pricing, and availability—all in one place.
           </p>
 
-          <div className="search-panel" aria-label="Search creators">
+          <div className="search-panel" aria-label="Find available videographers">
+            <div className="search-heading">
+              <strong>Find available videographers</strong>
+              <span>Two details. Your best matches.</span>
+            </div>
             <div className="search-fields">
               <label>
-                <span>What are you planning?</span>
+                <span>Event type</span>
                 <select defaultValue="Wedding">
                   <option>Wedding</option>
                   <option>Brand campaign</option>
@@ -128,12 +130,13 @@ export default function Home() {
                 </select>
               </label>
               <label>
-                <span>Where?</span>
-                <input defaultValue="Washington, DC" aria-label="Location" />
-              </label>
-              <label>
-                <span>When?</span>
-                <input type="date" defaultValue="2026-10-12" aria-label="Date" />
+                <span>Location</span>
+                <select defaultValue="Washington, DC" aria-label="Location">
+                  <option>Washington, DC</option>
+                  <option>Arlington, VA</option>
+                  <option>Silver Spring, MD</option>
+                  <option>Baltimore, MD</option>
+                </select>
               </label>
               <button
                 className="search-button"
@@ -142,37 +145,15 @@ export default function Home() {
                   document.getElementById("creators")?.scrollIntoView({ behavior: "smooth" })
                 }
               >
-                Find creators
-              </button>
-            </div>
-            <div className="reference-row">
-              <div>
-                <span className="spark">✦</span>
-                <strong>Have an inspiration video?</strong>
-                <small>We&apos;ll find creators with a similar visual style.</small>
-              </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="video/*"
-                hidden
-                onChange={() => setReferenceAdded(true)}
-              />
-              <button
-                type="button"
-                onClick={() =>
-                  referenceAdded ? setReferenceAdded(false) : fileRef.current?.click()
-                }
-              >
-                {referenceAdded ? "Reference added ✓" : "Upload or paste a link"}
+                Book now <span>→</span>
               </button>
             </div>
           </div>
 
-          <div className="trust-line" aria-label="Marketplace highlights">
-            <span><b>120+</b> verified creators</span>
-            <span><b>4.9</b> average rating</span>
-            <span><b>100%</b> transparent pricing</span>
+          <div className="trust-line" aria-label="Marketplace promise">
+            <span>✓ Verified portfolios</span>
+            <span>✓ Upfront pricing</span>
+            <span>✓ Real availability</span>
           </div>
         </div>
 
@@ -199,8 +180,8 @@ export default function Home() {
       <section className="creator-section" id="creators">
         <div className="section-heading">
           <div>
-            <p className="eyebrow"><span />Curated for your story</p>
-            <h2>Creators worth discovering.</h2>
+            <p className="eyebrow"><span />Available near Washington, DC</p>
+            <h2>Videographers ready to book.</h2>
           </div>
           <p>
             Every creator is portfolio-reviewed. Prices shown are real starting
@@ -229,9 +210,7 @@ export default function Home() {
                 <img src={creator.image} alt={`${creator.studio} portfolio`} />
                 <span className="availability">{creator.available}</span>
                 <button type="button" aria-label={`Save ${creator.studio}`}>♡</button>
-                {referenceAdded && (
-                  <span className="card-match">{creator.match}% style match</span>
-                )}
+                <span className="card-match">{creator.match}% style match</span>
               </div>
               <div className="card-body">
                 <div className="card-title">
@@ -287,7 +266,7 @@ export default function Home() {
 
       <footer>
         <a className="brand" href="#top">
-          <span className="brand-mark">FMV</span>
+          <span className="brand-mark" aria-hidden="true"><i /></span>
           <span>Find My Videographer</span>
         </a>
         <p>Built in the DMV for the people who capture it.</p>
