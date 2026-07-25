@@ -77,6 +77,8 @@ const filters = ["All creators", "Weddings", "Events", "Brands", "Music"];
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState("All creators");
+  const [eventType, setEventType] = useState("Wedding");
+  const [customEventType, setCustomEventType] = useState("");
   const [location, setLocation] = useState("Washington, DC");
   const [radius, setRadius] = useState(15);
   const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null);
@@ -137,11 +139,15 @@ export default function Home() {
             <div className="search-fields">
               <label>
                 <span>Event type</span>
-                <select defaultValue="Wedding">
+                <select
+                  value={eventType}
+                  onChange={(event) => setEventType(event.target.value)}
+                >
                   <option>Wedding</option>
                   <option>Brand campaign</option>
                   <option>Live event</option>
                   <option>Music video</option>
+                  <option>Other</option>
                 </select>
               </label>
               <label>
@@ -163,6 +169,18 @@ export default function Home() {
                 Book now <span>→</span>
               </button>
             </div>
+            {eventType === "Other" && (
+              <label className="custom-event-field">
+                <span>Your event type</span>
+                <input
+                  autoFocus
+                  value={customEventType}
+                  onChange={(event) => setCustomEventType(event.target.value)}
+                  placeholder="e.g. Graduation, proposal, community event"
+                  aria-label="Custom event type"
+                />
+              </label>
+            )}
           </div>
 
           <div className="trust-line" aria-label="Marketplace promise">
