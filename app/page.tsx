@@ -157,7 +157,7 @@ export default function Home() {
                 className="search-button"
                 type="button"
                 onClick={() =>
-                  document.getElementById("nearby-map")?.scrollIntoView({ behavior: "smooth" })
+                  document.getElementById("creators")?.scrollIntoView({ behavior: "smooth" })
                 }
               >
                 Book now <span>→</span>
@@ -172,39 +172,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="hero-visual" aria-label="Featured videographer">
-          <img
-            src="https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?auto=format&fit=crop&w=1500&q=88"
-            alt="Videographer filming a live celebration"
-          />
-          <div className="visual-topline">
-            <span>Featured creator</span>
-            <span>Washington, DC</span>
-          </div>
-          <div className="creator-overlay">
-            <div>
-              <p>MAYA CHEN FILMS</p>
-              <strong>Cinematic stories,<br />honestly told.</strong>
-            </div>
-            <span className="round-arrow">↗</span>
-          </div>
-          <div className="match-badge"><b>96%</b><span>style match</span></div>
-        </div>
-      </section>
-
-      <section className="creator-section" id="creators">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow"><span />Available near {location || "your area"}</p>
-            <h2>Videographers ready to book.</h2>
-          </div>
-          <p>
-            Every creator is portfolio-reviewed. Prices shown are real starting
-            rates—no hidden quote games.
-          </p>
-        </div>
-
-        <section className="map-discovery" id="nearby-map" aria-label="Nearby videographers map">
+        <section className="hero-map" id="nearby-map" aria-label="Nearby videographers map">
           <div className="map-panel">
             <div className="map-road road-one" />
             <div className="map-road road-two" />
@@ -234,17 +202,14 @@ export default function Home() {
               <button type="button" aria-label="Zoom in">+</button>
               <button type="button" aria-label="Zoom out">−</button>
             </div>
+            <div className="map-status">
+              <span><b>{visibleCreators.length}</b> available nearby</span>
+              <span>{location || "Your area"}</span>
+            </div>
           </div>
-
-          <div className="radius-panel">
-            <p className="map-kicker">SEARCH AREA</p>
-            <h3>Videographers near you</h3>
-            <p>
-              Showing {visibleCreators.length} available professional{visibleCreators.length === 1 ? "" : "s"} near{" "}
-              <strong>{location || "your location"}</strong>.
-            </p>
-            <div className="radius-value">
-              <span>Distance</span>
+          <div className="hero-radius">
+            <div>
+              <span>Search radius</span>
               <strong>{radius} miles</strong>
             </div>
             <input
@@ -257,18 +222,22 @@ export default function Home() {
               onChange={(event) => setRadius(Number(event.target.value))}
               aria-label="Search radius in miles"
             />
-            <div className="range-labels"><span>5 mi</span><span>25 mi</span></div>
-            <div className="nearby-list">
-              {visibleCreators.map((creator, index) => (
-                <button type="button" key={creator.studio} onClick={() => setSelectedCreator(creator)}>
-                  <span>{index + 1}</span>
-                  <div><strong>{creator.studio}</strong><small>{creator.distance} mi · {creator.available}</small></div>
-                  <b>↗</b>
-                </button>
-              ))}
-            </div>
           </div>
+          <p className="map-hint">Adjust the radius or select a marker to view and book a videographer.</p>
         </section>
+      </section>
+
+      <section className="creator-section" id="creators">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow"><span />Available near {location || "your area"}</p>
+            <h2>Videographers ready to book.</h2>
+          </div>
+          <p>
+            Every creator is portfolio-reviewed. Prices shown are real starting
+            rates—no hidden quote games.
+          </p>
+        </div>
 
         <div className="filter-row" role="group" aria-label="Filter creators">
           {filters.map((filter) => (
