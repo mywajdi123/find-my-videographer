@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const origin = host ? `${protocol}://${host}` : "http://localhost:3000";
   const title = "Find My Videographer | Your vision. The right lens.";
   const description =
-    "Discover, compare, and book trusted DMV videographers by style, budget, and availability.";
+    "Discover, compare, and book trusted DMV videographers with transparent service rates and real availability.";
 
   return {
     metadataBase: new URL(origin),

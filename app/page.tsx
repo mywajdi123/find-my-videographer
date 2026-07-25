@@ -10,7 +10,10 @@ type Creator = {
   specialty: string;
   rating: string;
   reviews: number;
-  price: number;
+  hourlyRate: number;
+  eventRates: Record<string, number>;
+  averageRates: Record<string, number>;
+  completedBookings: number;
   match: number;
   image: string;
   tags: string[];
@@ -28,7 +31,10 @@ const creators: Creator[] = [
     specialty: "Weddings & celebrations",
     rating: "4.9",
     reviews: 48,
-    price: 1800,
+    hourlyRate: 225,
+    eventRates: { Wedding: 1800, "Brand campaign": 1350, "Live event": 950, "Music video": 1500, Other: 800 },
+    averageRates: { Wedding: 2240, "Brand campaign": 1620, "Live event": 1180, "Music video": 1760, Other: 980 },
+    completedBookings: 38,
     match: 96,
     image:
       "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=88",
@@ -45,7 +51,10 @@ const creators: Creator[] = [
     specialty: "Brands & live events",
     rating: "5.0",
     reviews: 31,
-    price: 1450,
+    hourlyRate: 180,
+    eventRates: { Wedding: 1450, "Brand campaign": 1100, "Live event": 800, "Music video": 1250, Other: 650 },
+    averageRates: { Wedding: 1790, "Brand campaign": 1380, "Live event": 990, "Music video": 1480, Other: 820 },
+    completedBookings: 27,
     match: 92,
     image:
       "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=88",
@@ -62,7 +71,10 @@ const creators: Creator[] = [
     specialty: "Weddings & portraits",
     rating: "4.8",
     reviews: 64,
-    price: 2100,
+    hourlyRate: 260,
+    eventRates: { Wedding: 2100, "Brand campaign": 1550, "Live event": 1200, "Music video": 1700, Other: 900 },
+    averageRates: { Wedding: 2580, "Brand campaign": 1880, "Live event": 1430, "Music video": 2040, Other: 1120 },
+    completedBookings: 51,
     match: 88,
     image:
       "https://images.unsplash.com/photo-1507501336603-6e31db2be093?auto=format&fit=crop&w=1200&q=88",
@@ -80,6 +92,11 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState("All creators");
   const [eventType, setEventType] = useState("Wedding");
   const [customEventType, setCustomEventType] = useState("");
+  const [pricingMode, setPricingMode] = useState<"event" | "hourly">("event");
+  const [sortOrder, setSortOrder] = useState<"recommended" | "low" | "high">("recommended");
+  const [startDate, setStartDate] = useState("2026-10-12");
+  const [endDate, setEndDate] = useState("2026-10-13");
+  const [dateFlexibility, setDateFlexibility] = useState("Exact dates");
   const [location, setLocation] = useState("Washington, DC");
   const [radius, setRadius] = useState(15);
   const [mapOpen, setMapOpen] = useState(false);
@@ -90,20 +107,39 @@ export default function Home() {
   const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null);
   const [bookingSent, setBookingSent] = useState(false);
 
+  const selectedEvent = eventType === "Other" ? customEventType || "Other" : eventType;
+
+  function getStartingRate(creator: Creator) {
+    return pricingMode === "hourly"
+      ? creator.hourlyRate
+      : creator.eventRates[selectedEvent] ?? creator.eventRates.Other;
+  }
+
+  function getAverageRate(creator: Creator) {
+    return pricingMode === "hourly"
+      ? Math.round(creator.hourlyRate * 1.15)
+      : creator.averageRates[selectedEvent] ?? creator.averageRates.Other;
+  }
+
   const visibleCreators = useMemo(() => {
     const nearbyCreators = creators.filter((creator) => creator.distance <= radius);
+    let filteredCreators = nearbyCreators;
     if (activeFilter === "Weddings") {
-      return nearbyCreators.filter((creator) =>
+      filteredCreators = nearbyCreators.filter((creator) =>
         creator.specialty.toLowerCase().includes("wedding"),
       );
     }
     if (activeFilter === "Events") {
-      return nearbyCreators.filter((creator) =>
+      filteredCreators = nearbyCreators.filter((creator) =>
         creator.specialty.toLowerCase().includes("event"),
       );
     }
-    return nearbyCreators;
-  }, [activeFilter, radius]);
+    return [...filteredCreators].sort((a, b) => {
+      if (sortOrder === "low") return getStartingRate(a) - getStartingRate(b);
+      if (sortOrder === "high") return getStartingRate(b) - getStartingRate(a);
+      return b.match - a.match;
+    });
+  }, [activeFilter, pricingMode, radius, selectedEvent, sortOrder]);
 
   function closeModal() {
     setSelectedCreator(null);
@@ -225,6 +261,26 @@ export default function Home() {
                 />
               </label>
             )}
+            <div className="date-search-row">
+              <label>
+                <span>Start date</span>
+                <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+              </label>
+              <span className="date-arrow">→</span>
+              <label>
+                <span>End date</span>
+                <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+              </label>
+              <label className="flex-date">
+                <span>My dates are</span>
+                <select value={dateFlexibility} onChange={(event) => setDateFlexibility(event.target.value)}>
+                  <option>Exact dates</option>
+                  <option>Flexible ±1 day</option>
+                  <option>Flexible ±3 days</option>
+                  <option>Flexible ±1 week</option>
+                </select>
+              </label>
+            </div>
           </div>
 
           <div className="trust-line" aria-label="Marketplace promise">
@@ -271,7 +327,20 @@ export default function Home() {
               {filter}
             </button>
           ))}
-          <button className="all-filters" type="button">All filters <span>☷</span></button>
+          <div className="pricing-controls">
+            <div className="rate-toggle" role="group" aria-label="Rate type">
+              <button type="button" className={pricingMode === "event" ? "active" : ""} onClick={() => setPricingMode("event")}>Per event</button>
+              <button type="button" className={pricingMode === "hourly" ? "active" : ""} onClick={() => setPricingMode("hourly")}>Hourly</button>
+            </div>
+            <label className="sort-control">
+              <span>Sort</span>
+              <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value as "recommended" | "low" | "high")}>
+                <option value="recommended">Recommended</option>
+                <option value="low">Price: low to high</option>
+                <option value="high">Price: high to low</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <div className="creator-grid">
@@ -295,7 +364,17 @@ export default function Home() {
                   {creator.tags.map((tag) => <span key={tag}>{tag}</span>)}
                 </div>
                 <div className="card-footer">
-                  <p>From <strong>${creator.price.toLocaleString()}</strong></p>
+                  <div className="rate-summary">
+                    <p>Starting from</p>
+                    <strong>
+                      ${getStartingRate(creator).toLocaleString()}
+                      <small>{pricingMode === "hourly" ? " / hour" : " / event"}</small>
+                    </strong>
+                    <span>
+                      Typical {selectedEvent.toLowerCase()}: ${getAverageRate(creator).toLocaleString()}
+                      {pricingMode === "hourly" ? "/hr" : ""} · based on {creator.completedBookings} bookings
+                    </span>
+                  </div>
                   <button type="button" onClick={() => setSelectedCreator(creator)}>
                     View portfolio ↗
                   </button>
@@ -401,7 +480,13 @@ export default function Home() {
                       }}
                     >
                       <span>{index + 1}</span>
-                      <div><strong>{creator.studio}</strong><small>{creator.distance} mi · From ${creator.price.toLocaleString()}</small></div>
+                      <div>
+                        <strong>{creator.studio}</strong>
+                        <small>
+                          {creator.distance} mi · From ${getStartingRate(creator).toLocaleString()}
+                          {pricingMode === "hourly" ? "/hr" : "/event"}
+                        </small>
+                      </div>
                       <b>↗</b>
                     </button>
                   ))}
@@ -447,23 +532,77 @@ export default function Home() {
                 <form onSubmit={(event) => { event.preventDefault(); setBookingSent(true); }}>
                   <label>
                     Event type
-                    <select required defaultValue="Wedding">
+                    <select required value={eventType} onChange={(event) => setEventType(event.target.value)}>
                       <option>Wedding</option>
                       <option>Brand campaign</option>
                       <option>Live event</option>
+                      <option>Music video</option>
                       <option>Other</option>
                     </select>
                   </label>
-                  <div className="form-row">
-                    <label>Date<input required type="date" defaultValue="2026-10-12" /></label>
+                  {eventType === "Other" && (
                     <label>
-                      Estimated budget
-                      <select required defaultValue="$1,500–$2,500">
-                        <option>$1,500–$2,500</option>
-                        <option>$2,500–$4,000</option>
-                        <option>$4,000+</option>
+                      Your event type
+                      <input
+                        required
+                        value={customEventType}
+                        onChange={(event) => setCustomEventType(event.target.value)}
+                        placeholder="e.g. Graduation or proposal"
+                      />
+                    </label>
+                  )}
+                  <div className="form-row">
+                    <label>
+                      Start date
+                      <input required type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+                    </label>
+                    <label>
+                      End date
+                      <input required type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+                    </label>
+                  </div>
+                  <label>
+                    Date flexibility
+                    <select value={dateFlexibility} onChange={(event) => setDateFlexibility(event.target.value)}>
+                      <option>Exact dates</option>
+                      <option>Flexible ±1 day</option>
+                      <option>Flexible ±3 days</option>
+                      <option>Flexible ±1 week</option>
+                    </select>
+                  </label>
+                  <div className="booking-rate-choice">
+                    <span>How would you like to book?</span>
+                    <div>
+                      <button type="button" className={pricingMode === "event" ? "active" : ""} onClick={() => setPricingMode("event")}>Per event</button>
+                      <button type="button" className={pricingMode === "hourly" ? "active" : ""} onClick={() => setPricingMode("hourly")}>Hourly</button>
+                    </div>
+                  </div>
+                  {pricingMode === "hourly" && (
+                    <label>
+                      Estimated time
+                      <select defaultValue="2">
+                        <option value="0.5">30 minutes</option>
+                        <option value="1">1 hour</option>
+                        <option value="1.5">1.5 hours</option>
+                        <option value="2">2 hours</option>
+                        <option value="3">3 hours</option>
+                        <option value="4">4 hours</option>
                       </select>
                     </label>
+                  )}
+                  <div className="historical-estimate">
+                    <div>
+                      <span>Starting from</span>
+                      <strong>
+                        ${getStartingRate(selectedCreator).toLocaleString()}
+                        <small>{pricingMode === "hourly" ? "/hour" : "/event"}</small>
+                      </strong>
+                    </div>
+                    <p>
+                      Similar {selectedEvent.toLowerCase()} bookings usually average{" "}
+                      <b>${getAverageRate(selectedCreator).toLocaleString()}{pricingMode === "hourly" ? "/hour" : ""}</b>
+                      {" "}based on {selectedCreator.completedBookings} previous jobs.
+                    </p>
                   </div>
                   <label>
                     Tell us about your vision

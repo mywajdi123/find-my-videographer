@@ -81,9 +81,9 @@ export function RealMap({
 
       L.circle(center, {
         radius: radius * 1609.34,
-        color: "#d99539",
+        color: "#e89b78",
         weight: 2,
-        fillColor: "#d99539",
+        fillColor: "#e89b78",
         fillOpacity: 0.08,
       }).addTo(layers);
 
@@ -91,7 +91,7 @@ export function RealMap({
         radius: 8,
         color: "#ffffff",
         weight: 4,
-        fillColor: "#d99539",
+        fillColor: "#e89b78",
         fillOpacity: 1,
       })
         .bindTooltip(locationLabel, { direction: "top" })
