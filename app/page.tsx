@@ -14,6 +14,9 @@ type Creator = {
   image: string;
   tags: string[];
   available: string;
+  distance: number;
+  mapX: number;
+  mapY: number;
 };
 
 const creators: Creator[] = [
@@ -30,6 +33,9 @@ const creators: Creator[] = [
       "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=88",
     tags: ["Cinematic", "Warm", "Story-led"],
     available: "Available Oct 12",
+    distance: 3.2,
+    mapX: 49,
+    mapY: 42,
   },
   {
     name: "Andre Brooks",
@@ -44,6 +50,9 @@ const creators: Creator[] = [
       "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=88",
     tags: ["Documentary", "Bold", "Fast-paced"],
     available: "Available Oct 12",
+    distance: 6.8,
+    mapX: 31,
+    mapY: 66,
   },
   {
     name: "Sofia Reyes",
@@ -58,6 +67,9 @@ const creators: Creator[] = [
       "https://images.unsplash.com/photo-1507501336603-6e31db2be093?auto=format&fit=crop&w=1200&q=88",
     tags: ["Editorial", "Natural", "Romantic"],
     available: "Available Oct 13",
+    distance: 11.4,
+    mapX: 68,
+    mapY: 23,
   },
 ];
 
@@ -65,22 +77,25 @@ const filters = ["All creators", "Weddings", "Events", "Brands", "Music"];
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState("All creators");
+  const [location, setLocation] = useState("Washington, DC");
+  const [radius, setRadius] = useState(15);
   const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null);
   const [bookingSent, setBookingSent] = useState(false);
 
   const visibleCreators = useMemo(() => {
+    const nearbyCreators = creators.filter((creator) => creator.distance <= radius);
     if (activeFilter === "Weddings") {
-      return creators.filter((creator) =>
+      return nearbyCreators.filter((creator) =>
         creator.specialty.toLowerCase().includes("wedding"),
       );
     }
     if (activeFilter === "Events") {
-      return creators.filter((creator) =>
+      return nearbyCreators.filter((creator) =>
         creator.specialty.toLowerCase().includes("event"),
       );
     }
-    return creators;
-  }, [activeFilter]);
+    return nearbyCreators;
+  }, [activeFilter, radius]);
 
   function closeModal() {
     setSelectedCreator(null);
@@ -131,18 +146,18 @@ export default function Home() {
               </label>
               <label>
                 <span>Location</span>
-                <select defaultValue="Washington, DC" aria-label="Location">
-                  <option>Washington, DC</option>
-                  <option>Arlington, VA</option>
-                  <option>Silver Spring, MD</option>
-                  <option>Baltimore, MD</option>
-                </select>
+                <input
+                  value={location}
+                  aria-label="Location"
+                  onChange={(event) => setLocation(event.target.value)}
+                  placeholder="City or ZIP code"
+                />
               </label>
               <button
                 className="search-button"
                 type="button"
                 onClick={() =>
-                  document.getElementById("creators")?.scrollIntoView({ behavior: "smooth" })
+                  document.getElementById("nearby-map")?.scrollIntoView({ behavior: "smooth" })
                 }
               >
                 Book now <span>→</span>
@@ -180,7 +195,7 @@ export default function Home() {
       <section className="creator-section" id="creators">
         <div className="section-heading">
           <div>
-            <p className="eyebrow"><span />Available near Washington, DC</p>
+            <p className="eyebrow"><span />Available near {location || "your area"}</p>
             <h2>Videographers ready to book.</h2>
           </div>
           <p>
@@ -188,6 +203,72 @@ export default function Home() {
             rates—no hidden quote games.
           </p>
         </div>
+
+        <section className="map-discovery" id="nearby-map" aria-label="Nearby videographers map">
+          <div className="map-panel">
+            <div className="map-road road-one" />
+            <div className="map-road road-two" />
+            <div className="map-road road-three" />
+            <div className="map-water">POTOMAC</div>
+            <div
+              className="radius-circle"
+              style={{ width: `${Math.min(82, 31 + radius * 2.2)}%`, aspectRatio: "1" }}
+            />
+            <span className="map-center" aria-label={`Search center: ${location}`}>
+              <i />
+            </span>
+            {creators.map((creator, index) => (
+              <button
+                key={creator.studio}
+                type="button"
+                className={`map-marker ${creator.distance <= radius ? "" : "outside"}`}
+                style={{ left: `${creator.mapX}%`, top: `${creator.mapY}%` }}
+                aria-label={`${creator.studio}, ${creator.distance} miles away`}
+                onClick={() => creator.distance <= radius && setSelectedCreator(creator)}
+              >
+                <span><i>{index + 1}</i></span>
+                <small>{creator.studio}</small>
+              </button>
+            ))}
+            <div className="map-controls" aria-label="Map controls">
+              <button type="button" aria-label="Zoom in">+</button>
+              <button type="button" aria-label="Zoom out">−</button>
+            </div>
+          </div>
+
+          <div className="radius-panel">
+            <p className="map-kicker">SEARCH AREA</p>
+            <h3>Videographers near you</h3>
+            <p>
+              Showing {visibleCreators.length} available professional{visibleCreators.length === 1 ? "" : "s"} near{" "}
+              <strong>{location || "your location"}</strong>.
+            </p>
+            <div className="radius-value">
+              <span>Distance</span>
+              <strong>{radius} miles</strong>
+            </div>
+            <input
+              className="radius-slider"
+              type="range"
+              min="5"
+              max="25"
+              step="5"
+              value={radius}
+              onChange={(event) => setRadius(Number(event.target.value))}
+              aria-label="Search radius in miles"
+            />
+            <div className="range-labels"><span>5 mi</span><span>25 mi</span></div>
+            <div className="nearby-list">
+              {visibleCreators.map((creator, index) => (
+                <button type="button" key={creator.studio} onClick={() => setSelectedCreator(creator)}>
+                  <span>{index + 1}</span>
+                  <div><strong>{creator.studio}</strong><small>{creator.distance} mi · {creator.available}</small></div>
+                  <b>↗</b>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
 
         <div className="filter-row" role="group" aria-label="Filter creators">
           {filters.map((filter) => (
