@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { RealMap } from "./RealMap";
 
 type Creator = {
   name: string;
@@ -81,6 +82,11 @@ export default function Home() {
   const [customEventType, setCustomEventType] = useState("");
   const [location, setLocation] = useState("Washington, DC");
   const [radius, setRadius] = useState(15);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([38.9072, -77.0369]);
+  const [resolvedLocation, setResolvedLocation] = useState("Washington, DC");
+  const [locationError, setLocationError] = useState("");
+  const [locating, setLocating] = useState(false);
   const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null);
   const [bookingSent, setBookingSent] = useState(false);
 
@@ -102,6 +108,45 @@ export default function Home() {
   function closeModal() {
     setSelectedCreator(null);
     setBookingSent(false);
+  }
+
+  async function openLocationMap() {
+    const query = location.trim();
+    if (!query) {
+      setLocationError("Enter a city, ZIP code, or address.");
+      return;
+    }
+
+    setLocating(true);
+    setLocationError("");
+
+    try {
+      const cacheKey = `fmv-location:${query.toLowerCase()}`;
+      const cached = window.sessionStorage.getItem(cacheKey);
+      const result = cached
+        ? JSON.parse(cached)
+        : await fetch(
+            `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&q=${encodeURIComponent(query)}`,
+          ).then((response) => {
+            if (!response.ok) throw new Error("Location search failed");
+            return response.json();
+          });
+      const matches = Array.isArray(result) ? result : [result];
+
+      if (!matches[0]) {
+        setLocationError("We couldn’t find that location. Try a city and state or ZIP code.");
+        return;
+      }
+
+      if (!cached) window.sessionStorage.setItem(cacheKey, JSON.stringify(matches));
+      setMapCenter([Number(matches[0].lat), Number(matches[0].lon)]);
+      setResolvedLocation(matches[0].display_name ?? query);
+      setMapOpen(true);
+    } catch {
+      setLocationError("The map service is temporarily unavailable. Please try again.");
+    } finally {
+      setLocating(false);
+    }
   }
 
   return (
@@ -162,13 +207,12 @@ export default function Home() {
               <button
                 className="search-button"
                 type="button"
-                onClick={() =>
-                  document.getElementById("creators")?.scrollIntoView({ behavior: "smooth" })
-                }
+                onClick={openLocationMap}
               >
-                Book now <span>→</span>
+                {locating ? "Finding…" : "Book now"} <span>→</span>
               </button>
             </div>
+            {locationError && <p className="location-error">{locationError}</p>}
             {eventType === "Other" && (
               <label className="custom-event-field">
                 <span>Your event type</span>
@@ -190,59 +234,18 @@ export default function Home() {
           </div>
         </div>
 
-        <section className="hero-map" id="nearby-map" aria-label="Nearby videographers map">
-          <div className="map-panel">
-            <div className="map-road road-one" />
-            <div className="map-road road-two" />
-            <div className="map-road road-three" />
-            <div className="map-water">POTOMAC</div>
-            <div
-              className="radius-circle"
-              style={{ width: `${Math.min(82, 31 + radius * 2.2)}%`, aspectRatio: "1" }}
-            />
-            <span className="map-center" aria-label={`Search center: ${location}`}>
-              <i />
-            </span>
-            {creators.map((creator, index) => (
-              <button
-                key={creator.studio}
-                type="button"
-                className={`map-marker ${creator.distance <= radius ? "" : "outside"}`}
-                style={{ left: `${creator.mapX}%`, top: `${creator.mapY}%` }}
-                aria-label={`${creator.studio}, ${creator.distance} miles away`}
-                onClick={() => creator.distance <= radius && setSelectedCreator(creator)}
-              >
-                <span><i>{index + 1}</i></span>
-                <small>{creator.studio}</small>
-              </button>
-            ))}
-            <div className="map-controls" aria-label="Map controls">
-              <button type="button" aria-label="Zoom in">+</button>
-              <button type="button" aria-label="Zoom out">−</button>
-            </div>
-            <div className="map-status">
-              <span><b>{visibleCreators.length}</b> available nearby</span>
-              <span>{location || "Your area"}</span>
-            </div>
+        <div className="hero-visual" aria-label="Featured videographer">
+          <img
+            src="https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?auto=format&fit=crop&w=1500&q=88"
+            alt="Videographer filming a live celebration"
+          />
+          <div className="visual-topline"><span>Featured creator</span><span>Washington, DC</span></div>
+          <div className="creator-overlay">
+            <div><p>MAYA CHEN FILMS</p><strong>Cinematic stories,<br />honestly told.</strong></div>
+            <span className="round-arrow">↗</span>
           </div>
-          <div className="hero-radius">
-            <div>
-              <span>Search radius</span>
-              <strong>{radius} miles</strong>
-            </div>
-            <input
-              className="radius-slider"
-              type="range"
-              min="5"
-              max="25"
-              step="5"
-              value={radius}
-              onChange={(event) => setRadius(Number(event.target.value))}
-              aria-label="Search radius in miles"
-            />
-          </div>
-          <p className="map-hint">Adjust the radius or select a marker to view and book a videographer.</p>
-        </section>
+          <div className="match-badge"><b>96%</b><span>style match</span></div>
+        </div>
       </section>
 
       <section className="creator-section" id="creators">
@@ -340,6 +343,77 @@ export default function Home() {
         <p>Built in the DMV for the people who capture it.</p>
         <span>© 2026 Find My Videographer</span>
       </footer>
+
+      {mapOpen && (
+        <div className="map-modal-backdrop" role="presentation" onMouseDown={() => setMapOpen(false)}>
+          <section
+            className="real-map-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Videographers near your location"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <p>AVAILABLE NEAR YOU</p>
+                <h2>Choose a videographer.</h2>
+                <span>{resolvedLocation}</span>
+              </div>
+              <button type="button" onClick={() => setMapOpen(false)} aria-label="Close map">×</button>
+            </header>
+            <div className="real-map-layout">
+              <RealMap
+                center={mapCenter}
+                locationLabel={location}
+                radius={radius}
+                creators={visibleCreators}
+                onSelectCreator={(studio) => {
+                  const creator = creators.find((item) => item.studio === studio);
+                  if (creator) {
+                    setMapOpen(false);
+                    setSelectedCreator(creator);
+                  }
+                }}
+              />
+              <aside>
+                <div className="real-radius-control">
+                  <div><span>Search radius</span><strong>{radius} miles</strong></div>
+                  <input
+                    className="radius-slider"
+                    type="range"
+                    min="5"
+                    max="25"
+                    step="5"
+                    value={radius}
+                    onChange={(event) => setRadius(Number(event.target.value))}
+                    aria-label="Search radius in miles"
+                  />
+                </div>
+                <p className="result-count"><b>{visibleCreators.length}</b> available videographer{visibleCreators.length === 1 ? "" : "s"}</p>
+                <div className="map-result-list">
+                  {visibleCreators.map((creator, index) => (
+                    <button
+                      type="button"
+                      key={creator.studio}
+                      onClick={() => {
+                        setMapOpen(false);
+                        setSelectedCreator(creator);
+                      }}
+                    >
+                      <span>{index + 1}</span>
+                      <div><strong>{creator.studio}</strong><small>{creator.distance} mi · From ${creator.price.toLocaleString()}</small></div>
+                      <b>↗</b>
+                    </button>
+                  ))}
+                </div>
+              </aside>
+            </div>
+            <footer className="map-attribution-note">
+              Location search and map data © OpenStreetMap contributors. Search runs only when you submit a location.
+            </footer>
+          </section>
+        </div>
+      )}
 
       {selectedCreator && (
         <div className="modal-backdrop" role="presentation" onMouseDown={closeModal}>
